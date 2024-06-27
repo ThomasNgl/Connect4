@@ -1528,3 +1528,110 @@ def niv8(N,tab,j_):
     print(attaque)
     print(place)
     return(tab,stop)
+
+#%% Utility functions for AI
+def niv8(N, tab, j_):
+    stop = False
+
+    def score_position(tab, joueur):
+        score = 0
+        # Évaluation horizontale
+        for r in range(N):
+            row_array = [int(i) for i in list(tab[r])]
+            for c in range(N-3):
+                window = row_array[c:c+4]
+                score += evaluate_window(window, joueur)
+        
+        # Évaluation verticale
+        for c in range(N):
+            col_array = [int(tab[r][c]) for r in range(N)]
+            for r in range(N-3):
+                window = col_array[r:r+4]
+                score += evaluate_window(window, joueur)
+        
+        # Évaluation diagonale positive
+        for r in range(N-3):
+            for c in range(N-3):
+                window = [tab[r+i][c+i] for i in range(4)]
+                score += evaluate_window(window, joueur)
+        
+        # Évaluation diagonale négative
+        for r in range(N-3):
+            for c in range(N-3):
+                window = [tab[r+3-i][c+i] for i in range(4)]
+                score += evaluate_window(window, joueur)
+        
+        return score
+
+    def evaluate_window(window, joueur):
+        score = 0
+        opponent = 1 if joueur == 2 else 2
+        
+        if window.count(joueur) == 4:
+            score += 100
+        elif window.count(joueur) == 3 and window.count(0) == 1:
+            score += 5
+        elif window.count(joueur) == 2 and window.count(0) == 2:
+            score += 2
+
+        if window.count(opponent) == 3 and window.count(0) == 1:
+            score -= 4
+
+        return score
+
+    def is_valid_location(tab, col):
+        return tab[col][0] == 0
+
+    def get_next_open_row(tab, col):
+        for r in range(N-1, -1, -1):
+            if tab[col][r] == 0:
+                return r
+
+    def minimax(tab, depth, alpha, beta, maximizingPlayer):
+        valid_locations = [c for c in range(1, N-1) if is_valid_location(tab, c)]
+        is_terminal = len(valid_locations) == 0
+        if depth == 0 or is_terminal:
+            if is_terminal:
+                return (None, 100000000000000 if maximizingPlayer else -10000000000000)
+            else:
+                return (None, score_position(tab, j_ if maximizingPlayer else (1 if j_ == 2 else 2)))
+        
+        if maximizingPlayer:
+            value = -float('inf')
+            column = rd.choice(valid_locations)
+            for col in valid_locations:
+                row = get_next_open_row(tab, col)
+                b_copy = tab.copy()
+                b_copy[col][row] = j_
+                new_score = minimax(b_copy, depth-1, alpha, beta, False)[1]
+                if new_score > value:
+                    value = new_score
+                    column = col
+                alpha = max(alpha, value)
+                if alpha >= beta:
+                    break
+            return column, value
+
+        else:  # Minimizing player
+            value = float('inf')
+            column = rd.choice(valid_locations)
+            for col in valid_locations:
+                row = get_next_open_row(tab, col)
+                b_copy = tab.copy()
+                b_copy[col][row] = 1 if j_ == 2 else 2
+                new_score = minimax(b_copy, depth-1, alpha, beta, True)[1]
+                if new_score < value:
+                    value = new_score
+                    column = col
+                beta = min(beta, value)
+                if alpha >= beta:
+                    break
+            return column, value
+
+    col, minimax_score = minimax(tab, 4, -float('inf'), float('inf'), True)
+    
+    if is_valid_location(tab, col):
+        row = get_next_open_row(tab, col)
+        tab[col][row] = j_
+
+    return tab, stop
